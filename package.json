@@ -3,10 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "dev": "SET DEBUG=editing-app:* && nodemon ./bin/www",
+    "start": "set DEBUG=myapp:* && nodemon start"
   },
   "dependencies": {
     "cookie-parser": "~1.4.4",
+    "cors": "^2.8.6",
     "debug": "~2.6.9",
     "env": "^0.0.2",
     "express": "~4.16.1",
