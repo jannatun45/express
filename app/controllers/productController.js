@@ -306,6 +306,7 @@ const deleteProduct = async (req, res, next) => {
     next(error);
   }
 };
+
 // Export controller
 module.exports = {
   post,
