@@ -10,11 +10,14 @@
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.6",
     "debug": "~2.6.9",
+    "dotenv": "^17.4.2",
     "env": "^0.0.2",
     "express": "~4.16.1",
     "http-errors": "~1.6.3",
+    "mongoose": "^9.9.5",
     "mongosh": "^2.10.0",
     "morgan": "~1.9.1",
+    "multer": "^2.3.0",
     "pug": "2.0.0-beta11"
   }
 }
