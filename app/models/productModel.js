@@ -1,7 +1,6 @@
 const mongoose = require('mongoose')
-const {Schema, model} = mongoose
 
-const productSchema = Schema({
+const productSchema = mongoose.Schema({
     name: {
         type:String,
         minlength: [3, 'Panjang nama makanan minimal 3 karakter'],
