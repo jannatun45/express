@@ -228,8 +228,60 @@ const recalculateStandings = async (season) => {
   ]);
 };
 
+const getClubFixtures = async (req, res, next) => {
+  try {
+    const { clubId } = req.params;
+
+    const fixtures = await Fixture.find({
+      // $or artinya:
+      // "cari data yang memenuhi SALAH SATU
+      // dari kondisi berikut"
+      $or: [
+        // Kondisi pertama:
+        // clubId merupakan club yang bermain sebagai HOME
+        { home_club: clubId },
+
+        // Kondisi kedua:
+        // clubId merupakan club yang bermain sebagai AWAY
+        { away_club: clubId },
+      ],
+    })
+
+      // Mengambil data club home dari ObjectId
+      // lalu menggantinya dengan data club yang sebenarnya.
+      //
+      // "name_club logo" artinya kita hanya mengambil
+      // field name_club dan logo dari collection Club.
+      .populate("home_club", "name_club logo")
+
+      // Sama seperti sebelumnya,
+      // tetapi untuk club yang bermain sebagai away.
+      .populate("away_club", "name_club logo")
+
+      // Mengurutkan pertandingan berdasarkan:
+      //
+      // 1. season ASC
+      // 2. matchday ASC
+      //
+      // Angka 1 berarti ascending (kecil -> besar).
+      .sort({
+        season: 1,
+        matchday: 1,
+      });
+
+    // Mengirim hasil pertandingan ke frontend
+    // dalam bentuk JSON.
+    return res.json(fixtures);
+  } catch (error) {
+    // Kalau terjadi error,
+    // kirim error tersebut ke middleware error handler Express.
+    next(error);
+  }
+};
+
 module.exports = {
   generateSeasonFixtures,
   getFixtures,
   updateScore,
+  getClubFixtures,
 };

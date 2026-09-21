@@ -10,6 +10,13 @@ const clubSchema = new mongoose.Schema(
       ref: "Player",
     },
 
+    matches: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Fixture",
+      },
+    ],
+
     points: {
       type: Number,
       default: 0,
