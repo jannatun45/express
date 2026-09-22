@@ -1,5 +1,46 @@
 const mongoose = require("mongoose");
 
+// Detail setiap gol
+const goalSchema = new mongoose.Schema(
+  {
+    // Club yang mencetak gol
+    club: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Club",
+      required: true,
+    },
+
+    // Player yang mencetak gol
+    scorer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Player",
+      required: true,
+    },
+
+    // Menit terjadinya gol
+    minute: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+
+    // Player yang memberikan assist
+    // null jika gol berasal dari penalty
+    assist: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Player",
+      default: null,
+    },
+
+    // Apakah gol berasal dari penalty
+    is_penalty: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: true },
+);
+
 const fixtureSchema = new mongoose.Schema(
   {
     // Musim liga
@@ -37,12 +78,17 @@ const fixtureSchema = new mongoose.Schema(
     // Hasil pertandingan
     home_score: {
       type: Number,
-      default: null,
+      default: 0,
+    },
+
+    draw: {
+      type: Number,
+      default: 0,
     },
 
     away_score: {
       type: Number,
-      default: null,
+      default: 0,
     },
 
     // Status pertandingan
@@ -50,6 +96,12 @@ const fixtureSchema = new mongoose.Schema(
       type: String,
       enum: ["scheduled", "finished", "postponed"],
       default: "scheduled",
+    },
+
+    // Daftar gol
+    goals: {
+      type: [goalSchema],
+      default: [],
     },
   },
   {
