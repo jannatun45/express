@@ -81,6 +81,11 @@ const fixtureSchema = new mongoose.Schema(
       default: 0,
     },
 
+    draw: {
+      type: Number,
+      default: 0,
+    },
+
     away_score: {
       type: Number,
       default: 0,

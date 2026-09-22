@@ -85,67 +85,53 @@ const getFixtures = async (req, res, next) => {
 };
 
 // Update score pertandingan
-const updateScore = async (req, res, next) => {
+const updateScore = async (req, res) => {
   try {
     const { id } = req.params;
-    const { home_score, away_score } = req.body;
+    console.log("id in params update score -> ", req.params.id);
+    console.log("id in params update score -> ", req.body.home_score);
+    console.log("id in params update score -> ", req.body.away_score);
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        error: 1,
-        message: "ID pertandingan tidak valid",
-      });
-    }
+    const { home_score, away_score } = req.body;
 
     if (home_score === undefined || away_score === undefined) {
       return res.status(400).json({
-        error: 1,
-        message: "home_score dan away_score wajib diisi",
+        message: "Home score dan away score wajib diisi",
       });
     }
 
-    if (
-      !Number.isInteger(home_score) ||
-      !Number.isInteger(away_score) ||
-      home_score < 0 ||
-      away_score < 0
-    ) {
-      return res.status(400).json({
-        error: 1,
-        message: "Score harus berupa angka bulat dan tidak boleh negatif",
-      });
-    }
-
-    const fixture = await Fixture.findById(id);
-
-    if (!fixture) {
-      return res.status(404).json({
-        error: 1,
-        message: "Pertandingan tidak ditemukan",
-      });
-    }
-
-    // Simpan hasil pertandingan
-    fixture.home_score = home_score;
-    fixture.away_score = away_score;
-    fixture.status = "finished";
-
-    await fixture.save();
-
-    // Hitung ulang klasemen
-    await recalculateStandings(fixture.season);
-
-    const result = await Fixture.findById(id)
+    const fixture = await Fixture.findByIdAndUpdate(
+      id,
+      {
+        home_score,
+        away_score,
+        status: "finished",
+      },
+      {
+        returnDocument: "after",
+        runValidators: true,
+      },
+    )
       .populate("home_club", "name_club logo")
       .populate("away_club", "name_club logo");
 
-    return res.json({
-      error: 0,
+    if (!fixture) {
+      return res.status(404).json({
+        message: "Fixture tidak ditemukan",
+      });
+    }
+
+    res.json({
       message: "Score berhasil diperbarui",
-      data: result,
+      data: fixture,
     });
   } catch (error) {
-    next(error);
+    console.error(error);
+
+    res.status(500).json({
+      message: "Gagal mengupdate score",
+      error: error.message,
+    });
   }
 };
 
