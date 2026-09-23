@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Fixture = require("../models/fixtureModel");
 const Club = require("../models/clubModel");
 const generateFixtures = require("../utils/fictureGenerate");
+const Standing = require("../models/standingModel");
 
 // Generate seluruh jadwal satu season
 const generateSeasonFixtures = async (req, res, next) => {
@@ -88,9 +89,6 @@ const getFixtures = async (req, res, next) => {
 const updateScore = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("id in params update score -> ", req.params.id);
-    console.log("id in params update score -> ", req.body.home_score);
-    console.log("id in params update score -> ", req.body.away_score);
 
     const { home_score, away_score } = req.body;
 
@@ -111,9 +109,7 @@ const updateScore = async (req, res) => {
         returnDocument: "after",
         runValidators: true,
       },
-    )
-      .populate("home_club", "name_club logo")
-      .populate("away_club", "name_club logo");
+    );
 
     if (!fixture) {
       return res.status(404).json({
@@ -121,12 +117,15 @@ const updateScore = async (req, res) => {
       });
     }
 
-    res.json({
-      message: "Score berhasil diperbarui",
+    // Hitung ulang standing
+    await recalculateStandings(fixture.season);
+
+    res.status(200).json({
+      message: "Score dan standing berhasil diperbarui",
       data: fixture,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Update score error:", error);
 
     res.status(500).json({
       message: "Gagal mengupdate score",
@@ -134,84 +133,114 @@ const updateScore = async (req, res) => {
     });
   }
 };
-
 // Hitung ulang klasemen
 const recalculateStandings = async (season) => {
+  // 1. Ambil semua club
   const clubs = await Club.find();
 
-  // Reset statistik
-  for (const club of clubs) {
-    club.points = 0;
-    club.match = 0;
-    club.win = 0;
-    club.draw = 0;
-    club.lose = 0;
-    club.goals_for = 0;
-    club.goals_againts = 0;
-    club.goal_difference = 0;
+  // 2. Hapus standing untuk season ini
+  await Standing.deleteMany({
+    season,
+  });
 
-    await club.save();
-  }
+  // 3. Buat data standing awal
+  const standings = clubs.map((club) => ({
+    season,
+    club: club._id,
 
-  // Ambil pertandingan yang sudah selesai
+    match: 0,
+    win: 0,
+    draw: 0,
+    lose: 0,
+
+    points: 0,
+
+    goals_for: 0,
+    goals_againts: 0,
+    goal_difference: 0,
+  }));
+
+  // 4. Ambil semua fixture yang sudah selesai
   const fixtures = await Fixture.find({
     season,
     status: "finished",
   });
 
-  // Hitung statistik
+  // 5. Hitung statistik dari fixture
   for (const fixture of fixtures) {
-    const homeClub = await Club.findById(fixture.home_club);
-    const awayClub = await Club.findById(fixture.away_club);
+    const homeStanding = standings.find(
+      (standing) => standing.club.toString() === fixture.home_club.toString(),
+    );
 
-    if (!homeClub || !awayClub) {
+    const awayStanding = standings.find(
+      (standing) => standing.club.toString() === fixture.away_club.toString(),
+    );
+
+    if (!homeStanding || !awayStanding) {
       continue;
     }
 
-    const homeScore = fixture.home_score;
-    const awayScore = fixture.away_score;
+    const homeScore = fixture.home_score ?? 0;
+    const awayScore = fixture.away_score ?? 0;
 
-    homeClub.match += 1;
-    awayClub.match += 1;
+    // =========================
+    // MATCH
+    // =========================
 
-    homeClub.goals_for += homeScore;
-    homeClub.goals_againts += awayScore;
+    homeStanding.match += 1;
+    awayStanding.match += 1;
 
-    awayClub.goals_for += awayScore;
-    awayClub.goals_againts += homeScore;
+    // =========================
+    // GOALS FOR
+    // =========================
+
+    homeStanding.goals_for += homeScore;
+    awayStanding.goals_for += awayScore;
+
+    // =========================
+    // GOALS AGAINST
+    // =========================
+
+    homeStanding.goals_againts += awayScore;
+    awayStanding.goals_againts += homeScore;
+
+    // =========================
+    // RESULT
+    // =========================
 
     if (homeScore > awayScore) {
-      homeClub.win += 1;
-      homeClub.points += 3;
+      // Home menang
+      homeStanding.win += 1;
+      homeStanding.points += 3;
 
-      awayClub.lose += 1;
+      // Away kalah
+      awayStanding.lose += 1;
     } else if (homeScore < awayScore) {
-      awayClub.win += 1;
-      awayClub.points += 3;
+      // Away menang
+      awayStanding.win += 1;
+      awayStanding.points += 3;
 
-      homeClub.lose += 1;
+      // Home kalah
+      homeStanding.lose += 1;
     } else {
-      homeClub.draw += 1;
-      awayClub.draw += 1;
+      // Draw
+      homeStanding.draw += 1;
+      awayStanding.draw += 1;
 
-      homeClub.points += 1;
-      awayClub.points += 1;
+      homeStanding.points += 1;
+      awayStanding.points += 1;
     }
-
-    await homeClub.save();
-    await awayClub.save();
   }
 
-  // Hitung selisih gol
-  await Club.updateMany({}, [
-    {
-      $set: {
-        goal_difference: {
-          $subtract: ["$goals_for", "$goals_againts"],
-        },
-      },
-    },
-  ]);
+  // 6. Hitung goal difference
+  for (const standing of standings) {
+    standing.goal_difference = standing.goals_for - standing.goals_againts;
+  }
+
+  // 7. Simpan semua standing ke database
+  await Standing.insertMany(standings);
+
+  return standings;
 };
 
 const getClubFixtures = async (req, res, next) => {
@@ -265,9 +294,44 @@ const getClubFixtures = async (req, res, next) => {
   }
 };
 
+// get standing
+const getStandings = async (req, res) => {
+  try {
+    const { season } = req.query;
+
+    if (!season) {
+      return res.status(400).json({
+        message: "Season wajib diisi",
+      });
+    }
+
+    const standings = await Standing.find({
+      season,
+    })
+      .populate("club", "name_club logo stadium district")
+      .sort({
+        points: -1,
+        goal_difference: -1,
+        goals_for: -1,
+      });
+
+    res.status(200).json({
+      data: standings,
+    });
+  } catch (error) {
+    console.error("Get standings error:", error);
+
+    res.status(500).json({
+      message: "Gagal mengambil standing",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   generateSeasonFixtures,
   getFixtures,
   updateScore,
   getClubFixtures,
+  getStandings,
 };

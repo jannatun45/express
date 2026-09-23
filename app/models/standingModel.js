@@ -1,81 +1,63 @@
-// models/Standing.js
+const mongoose = require("mongoose");
 
-import { DataTypes } from "sequelize";
-import sequelize from "../config/database.js";
-
-const Standing = sequelize.define(
-  "Standing",
+const standingSchema = new mongoose.Schema(
   {
-    id_standing: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
+    season: {
+      type: String,
+      required: true,
     },
 
-    id_club: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
+    club: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Club",
+      required: true,
     },
 
-    id_league: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-
-    id_season: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-
-    position: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-
-    played: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
+    match: {
+      type: Number,
+      default: 0,
     },
 
     win: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
+      type: Number,
+      default: 0,
     },
 
     draw: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
+      type: Number,
+      default: 0,
     },
 
     lose: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-
-    goals_for: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-
-    goals_against: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-
-    goal_difference: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
+      type: Number,
+      default: 0,
     },
 
     points: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
+      type: Number,
+      default: 0,
+    },
+
+    goals_for: {
+      type: Number,
+      default: 0,
+    },
+
+    goals_againts: {
+      type: Number,
+      default: 0,
+    },
+
+    goal_difference: {
+      type: Number,
+      default: 0,
     },
   },
   {
-    tableName: "standings",
     timestamps: true,
-  }
+  },
 );
 
-export default Standing;
+standingSchema.index({ season: 1, club: 1 }, { unique: true });
+
+module.exports = mongoose.model("Standing", standingSchema);

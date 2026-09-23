@@ -13,4 +13,6 @@ router.put("/fixtures/:id/score", fixtureController.updateScore);
 
 router.get("/fixtures/club/:clubId", fixtureController.getClubFixtures);
 
+router.get("/standings", fixtureController.getStandings);
+
 module.exports = router;
