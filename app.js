@@ -7,6 +7,7 @@ const cors = require("cors");
 const productRoute = require("./app/routes/productRoutes");
 const clubRoute = require("./app/routes/clubRoutes");
 const fictureRoute = require("./app/routes/fixtureRoutes");
+const playerRoute = require("./app/routes/playerRoutes");
 
 // var indexRouter = require('./routes/index');
 // var usersRouter = require('./routes/users');
@@ -28,6 +29,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/api", productRoute);
 app.use("/api", clubRoute);
 app.use("/api", fictureRoute);
+app.use("/api", playerRoute);
 
 // HOME
 app.use("/", function (req, res) {

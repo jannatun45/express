@@ -1,76 +1,70 @@
 // models/Player.js
 
-import { DataTypes } from "sequelize";
-import sequelize from "../config/database.js";
+const mongoose = require("mongoose");
 
-const Player = sequelize.define(
-  "Player",
+const playerSchema = new mongoose.Schema(
   {
-    id_player: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-
-    id_club: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
+    club: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Club",
+      required: true,
     },
 
     name_player: {
-      type: DataTypes.STRING,
-      allowNull: false,
+      type: String,
+      required: true,
+      trim: true,
     },
-
+    photo: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     position: {
-      type: DataTypes.STRING,
-      allowNull: false,
+      type: String,
+      enum: ["GK", "DF", "MF", "FW"],
+      required: true,
     },
 
     contract_expires: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
+      type: Date,
+      default: null,
     },
 
     joined: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
+      type: Date,
+      default: null,
     },
 
     national: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      type: String,
+      default: null,
+      trim: true,
     },
 
     market_value: {
-      type: DataTypes.DECIMAL(15, 2),
-      allowNull: true,
-    },
-
-    age: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
+      type: Number,
+      default: null,
     },
 
     date_of_birth: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
+      type: Date,
+      default: null,
     },
 
-    gol: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
+    goals: {
+      type: Number,
+      default: 0,
     },
 
-    assist: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
+    assists: {
+      type: Number,
+      default: 0,
     },
   },
   {
-    tableName: "players",
     timestamps: true,
-  }
+  },
 );
 
-export default Player;
+module.exports = mongoose.model("Player", playerSchema);
