@@ -1,5 +1,37 @@
 const mongoose = require("mongoose");
 
+const goalSchema = new mongoose.Schema(
+  {
+    club: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Club",
+      required: true,
+    },
+
+    scorer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Player",
+      required: true,
+    },
+
+    minute: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 120,
+    },
+
+    assist: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Player",
+      default: null,
+    },
+  },
+  {
+    _id: true,
+  },
+);
+
 const fixtureSchema = new mongoose.Schema(
   {
     season: {
@@ -43,6 +75,11 @@ const fixtureSchema = new mongoose.Schema(
       type: String,
       enum: ["scheduled", "finished", "postponed"],
       default: "scheduled",
+    },
+
+    goals: {
+      type: [goalSchema],
+      default: [],
     },
   },
   {
