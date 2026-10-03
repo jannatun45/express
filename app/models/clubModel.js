@@ -23,6 +23,10 @@ const clubSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    penalty_applied: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
