@@ -90,7 +90,7 @@ const updateScore = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { home_score, away_score } = req.body;
+    const { home_score, away_score, goals } = req.body;
 
     if (home_score === undefined || away_score === undefined) {
       return res.status(400).json({
@@ -103,6 +103,7 @@ const updateScore = async (req, res) => {
       {
         home_score,
         away_score,
+        goals,
         status: "finished",
       },
       {
@@ -133,6 +134,7 @@ const updateScore = async (req, res) => {
     });
   }
 };
+
 // Hitung ulang klasemen
 const recalculateStandings = async (season) => {
   // 1. Ambil semua club
@@ -328,10 +330,100 @@ const getStandings = async (req, res) => {
   }
 };
 
+// update fixtures atau update match
+const updateFixture = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { matchday, match_date } = req.body;
+
+    if (matchday === undefined || !match_date) {
+      return res.status(400).json({
+        message: "Matchday dan waktu pertandingan wajib diisi",
+      });
+    }
+
+    const fixture = await Fixture.findByIdAndUpdate(
+      id,
+      {
+        matchday: Number(matchday),
+        match_date: new Date(match_date),
+      },
+      {
+        returnDocument: "after",
+        runValidators: true,
+      },
+    )
+      .populate("home_club", "name_club logo")
+      .populate("away_club", "name_club logo");
+
+    if (!fixture) {
+      return res.status(404).json({
+        message: "Fixture tidak ditemukan",
+      });
+    }
+
+    res.status(200).json({
+      message: "Jadwal pertandingan berhasil diperbarui",
+      data: fixture,
+    });
+  } catch (error) {
+    console.error("Update fixture error:", error);
+
+    res.status(500).json({
+      message: "Gagal memperbarui jadwal pertandingan",
+      error: error.message,
+    });
+  }
+};
+
+//  reset fixture result
+// const resetFixtureResult = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const fixture = await Fixture.findByIdAndUpdate(
+//       id,
+//       {
+//         home_score: null,
+//         away_score: null,
+//         goals: [],
+//         status: "scheduled",
+//       },
+//       {
+//         returnDocument: "after",
+//         runValidators: true,
+//       },
+//     );
+
+//     if (!fixture) {
+//       return res.status(404).json({
+//         message: "Fixture tidak ditemukan",
+//       });
+//     }
+
+//     // Hitung ulang standing karena hasil pertandingan sudah dihapus
+//     await recalculateStandings(fixture.season);
+
+//     res.status(200).json({
+//       message: "Hasil pertandingan berhasil direset",
+//       data: fixture,
+//     });
+//   } catch (error) {
+//     console.error("Reset fixture result error:", error);
+
+//     res.status(500).json({
+//       message: "Gagal mereset hasil pertandingan",
+//       error: error.message,
+//     });
+//   }
+// };
+
 module.exports = {
   generateSeasonFixtures,
   getFixtures,
   updateScore,
   getClubFixtures,
   getStandings,
+  updateFixture,
 };
