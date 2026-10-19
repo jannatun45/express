@@ -17,8 +17,6 @@ const goalSchema = new mongoose.Schema(
     minute: {
       type: Number,
       required: true,
-      min: 1,
-      max: 120,
     },
 
     assist: {

@@ -4,9 +4,13 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 const cors = require("cors");
+
+// ROUTES
 const clubRoute = require("./app/routes/clubRoutes");
 const fictureRoute = require("./app/routes/fixtureRoutes");
 const playerRoute = require("./app/routes/playerRoutes");
+const matchRoute = require("./app/routes/matchRouter");
+const goalEventRoute = require("./app/routes/goalEventRoutes");
 
 // var indexRouter = require('./routes/index');
 // var usersRouter = require('./routes/users');
@@ -28,6 +32,8 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/api", clubRoute);
 app.use("/api", fictureRoute);
 app.use("/api", playerRoute);
+app.use("/api", matchRoute);
+app.use("/api", goalEventRoute);
 
 // HOME
 app.use("/", function (req, res) {

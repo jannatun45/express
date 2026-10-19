@@ -378,46 +378,46 @@ const updateFixture = async (req, res) => {
 };
 
 //  reset fixture result
-const resetFixtureResult = async (req, res) => {
-  try {
-    const { id } = req.params;
+// const resetFixtureResult = async (req, res) => {
+//   try {
+//     const { id } = req.params;
 
-    const fixture = await Fixture.findByIdAndUpdate(
-      id,
-      {
-        home_score: null,
-        away_score: null,
-        goals: [],
-        status: "scheduled",
-      },
-      {
-        returnDocument: "after",
-        runValidators: true,
-      },
-    );
+//     const fixture = await Fixture.findByIdAndUpdate(
+//       id,
+//       {
+//         home_score: null,
+//         away_score: null,
+//         goals: [],
+//         status: "scheduled",
+//       },
+//       {
+//         returnDocument: "after",
+//         runValidators: true,
+//       },
+//     );
 
-    if (!fixture) {
-      return res.status(404).json({
-        message: "Fixture tidak ditemukan",
-      });
-    }
+//     if (!fixture) {
+//       return res.status(404).json({
+//         message: "Fixture tidak ditemukan",
+//       });
+//     }
 
-    // Hitung ulang standing karena hasil pertandingan sudah dihapus
-    await recalculateStandings(fixture.season);
+//     // Hitung ulang standing karena hasil pertandingan sudah dihapus
+//     await recalculateStandings(fixture.season);
 
-    res.status(200).json({
-      message: "Hasil pertandingan berhasil direset",
-      data: fixture,
-    });
-  } catch (error) {
-    console.error("Reset fixture result error:", error);
+//     res.status(200).json({
+//       message: "Hasil pertandingan berhasil direset",
+//       data: fixture,
+//     });
+//   } catch (error) {
+//     console.error("Reset fixture result error:", error);
 
-    res.status(500).json({
-      message: "Gagal mereset hasil pertandingan",
-      error: error.message,
-    });
-  }
-};
+//     res.status(500).json({
+//       message: "Gagal mereset hasil pertandingan",
+//       error: error.message,
+//     });
+//   }
+// };
 
 module.exports = {
   generateSeasonFixtures,
@@ -426,5 +426,4 @@ module.exports = {
   getClubFixtures,
   getStandings,
   updateFixture,
-  resetFixtureResult,
 };

@@ -114,7 +114,6 @@ const createClub = async (req, res, next) => {
     next(error);
   }
 };
-
 // GET ALL CLUBS
 const getClubs = async (req, res, next) => {
   try {
@@ -131,7 +130,6 @@ const getClubs = async (req, res, next) => {
     next(error);
   }
 };
-
 // GET ONE CLUB
 const getClub = async (req, res, next) => {
   try {
@@ -159,7 +157,6 @@ const getClub = async (req, res, next) => {
     next(error);
   }
 };
-
 // UPDATE CLUB
 const updateClub = async (req, res, next) => {
   try {
@@ -285,7 +282,6 @@ const updateClub = async (req, res, next) => {
     next(error);
   }
 };
-
 // DELETE CLUB
 const deleteClub = async (req, res, next) => {
   try {

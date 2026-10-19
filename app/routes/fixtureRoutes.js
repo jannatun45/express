@@ -18,6 +18,6 @@ router.put("/fixtures/:id", fixtureController.updateFixture);
 router.get("/standings", fixtureController.getStandings);
 
 // reset fixtures
-router.put("/fixtures/:id/reset", fixtureController.resetFixtureResult);
+// router.put("/fixtures/:id/reset", fixtureController.resetFixtureResult);
 
 module.exports = router;
