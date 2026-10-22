@@ -1,6 +1,75 @@
 const Player = require("../models/palyerModel");
-const fs = require("fs");
-const path = require("path");
+// const fs = require("fs");
+// const path = require("path");
+
+const mongoose = require("mongoose");
+// const Player = require("../models/playerModel");
+const Club = require("../models/clubModel");
+const GoalEvent = require("../models/goalEventModel");
+
+// // PATCH /api/players/:id/transfer
+const transferPlayer = async (req, res, next) => {
+  try {
+    const { clubId } = req.body;
+
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "ID pemain tidak valid",
+      });
+    }
+
+    if (!mongoose.isValidObjectId(clubId)) {
+      return res.status(400).json({
+        message: "ID klub tujuan tidak valid",
+      });
+    }
+
+    const [player, destinationClub] = await Promise.all([
+      Player.findById(req.params.id).populate("club", "name_club"),
+      Club.findById(clubId),
+    ]);
+
+    if (!player) {
+      return res.status(404).json({
+        message: "Pemain tidak ditemukan",
+      });
+    }
+
+    if (!destinationClub) {
+      return res.status(404).json({
+        message: "Klub tujuan tidak ditemukan",
+      });
+    }
+
+    if (String(player.club?._id || player.club) === String(clubId)) {
+      return res.status(400).json({
+        message: "Pemain sudah terdaftar di klub tersebut",
+      });
+    }
+
+    const previousClub = player.club?.name_club || "Klub sebelumnya";
+
+    player.club = clubId;
+    await player.save();
+
+    const updatedPlayer = await Player.findById(player._id).populate(
+      "club",
+      "name_club logo",
+    );
+
+    res.json({
+      message: "Transfer pemain berhasil",
+      transfer: {
+        player: player.name_player,
+        from: previousClub,
+        to: destinationClub.name_club,
+      },
+      data: updatedPlayer,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const createPlayer = async (req, res) => {
   try {
@@ -194,10 +263,11 @@ const deletePlayer = async (req, res) => {
 };
 
 module.exports = {
-  createPlayer,
   getPlayers,
   getPlayerById,
-  getPlayersByClub,
+  createPlayer,
   updatePlayer,
+  transferPlayer,
   deletePlayer,
+  getPlayersByClub,
 };

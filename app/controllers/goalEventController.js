@@ -30,6 +30,7 @@ const createGoalEvent = async (req, res) => {
 const getGoalEvents = async (req, res) => {
   try {
     const { club, season, fixture } = req.query;
+    console.log(req.query);
 
     const filter = {};
 

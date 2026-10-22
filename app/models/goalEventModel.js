@@ -38,6 +38,12 @@ const goalEventSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Penanda gol bunuh diri
+    is_own_goal: {
+      type: Boolean,
+      default: false,
+    },
+
     // Menit gol, contoh 45 atau 90
     minute: {
       type: Number,

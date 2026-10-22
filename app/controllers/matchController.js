@@ -3,6 +3,96 @@ const Fixture = require("../models/fixtureModel");
 const Club = require("../models/clubModel");
 const Standing = require("../models/standingModel");
 const GoalEvent = require("../models/goalEventModel");
+const fixtureModel = require("../models/fixtureModel");
+
+// CREATE MATCH / Membuat jadwal pertandingan baru
+const createMatch = async (req, res, next) => {
+  try {
+    const { season, matchday, home_club, away_club, match_date } = req.body;
+
+    // 1. Validasi data wajib
+    if (
+      !season ||
+      matchday === undefined ||
+      !home_club ||
+      !away_club ||
+      !match_date
+    ) {
+      return res.status(400).json({
+        message:
+          "Season, matchday, klub kandang, klub tandang, dan tanggal wajib diisi",
+      });
+    }
+
+    // 2. Validasi ID klub
+    if (
+      !mongoose.isValidObjectId(home_club) ||
+      !mongoose.isValidObjectId(away_club)
+    ) {
+      return res.status(400).json({
+        message: "ID klub kandang atau tandang tidak valid",
+      });
+    }
+
+    // 3. Pastikan klub kandang dan tandang berbeda
+    if (String(home_club) === String(away_club)) {
+      return res.status(400).json({
+        message: "Klub kandang dan tandang tidak boleh sama",
+      });
+    }
+
+    // 4. Validasi matchday
+    const parsedMatchday = Number(matchday);
+
+    if (!Number.isInteger(parsedMatchday) || parsedMatchday < 1) {
+      return res.status(400).json({
+        message: "Matchday harus berupa bilangan bulat positif",
+      });
+    }
+
+    // 5. Validasi tanggal
+    const parsedDate = new Date(match_date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return res.status(400).json({
+        message: "Tanggal pertandingan tidak valid",
+      });
+    }
+
+    // 6. Pastikan kedua klub tersedia di database
+    const clubs = await Club.find({
+      _id: { $in: [home_club, away_club] },
+    }).select("_id");
+
+    if (clubs.length !== 2) {
+      return res.status(404).json({
+        message: "Klub kandang atau klub tandang tidak ditemukan",
+      });
+    }
+
+    // 7. Buat fixture baru
+    const match = await Fixture.create({
+      season: season.trim(),
+      matchday: parsedMatchday,
+      home_club,
+      away_club,
+      match_date: parsedDate,
+      status: "scheduled",
+    });
+
+    // 8. Ambil detail klub untuk respons
+    const createdMatch = await Fixture.findById(match._id)
+      .populate("home_club", "name_club logo stadium")
+      .populate("away_club", "name_club logo stadium");
+
+    return res.status(201).json({
+      message: "Jadwal pertandingan berhasil dibuat",
+      data: createdMatch,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // GET MATCHES / Mengambil jadwal pertandingan
 const getMatches = async (req, res, next) => {
@@ -47,7 +137,6 @@ const getMatches = async (req, res, next) => {
 };
 
 // GET CLUB MATCH / Ambil jadwal pertandingan berdasarkan club
-
 const getClubMatch = async (req, res, next) => {
   try {
     // Mengambil clubId dari parameter URL.
@@ -122,57 +211,6 @@ const getClubMatch = async (req, res, next) => {
   }
 };
 
-// const getClubMatch = async (req, res, next) => {
-//   try {
-//     const { clubId } = req.params;
-
-//     const matches = await Fixture.find({
-//       // $or artinya:
-//       // "cari data yang memenuhi SALAH SATU
-//       // dari kondisi berikut"
-//       $or: [
-//         // Kondisi pertama:
-//         // clubId merupakan club yang bermain sebagai HOME
-//         { home_club: clubId },
-
-//         // Kondisi kedua:
-//         // clubId merupakan club yang bermain sebagai AWAY
-//         { away_club: clubId },
-//       ],
-//     })
-
-//       // Mengambil data club home dari ObjectId
-//       // lalu menggantinya dengan data club yang sebenarnya.
-//       //
-//       // "name_club logo" artinya kita hanya mengambil
-//       // field name_club dan logo dari collection Club.
-//       .populate("home_club", "name_club logo")
-
-//       // Sama seperti sebelumnya,
-//       // tetapi untuk club yang bermain sebagai away.
-//       .populate("away_club", "name_club logo")
-
-//       // Mengurutkan pertandingan berdasarkan:
-//       //
-//       // 1. season ASC
-//       // 2. matchday ASC
-//       //
-//       // Angka 1 berarti ascending (kecil -> besar).
-//       .sort({
-//         season: 1,
-//         matchday: 1,
-//       });
-
-//     // Mengirim hasil pertandingan ke frontend
-//     // dalam bentuk JSON.
-//     return res.json(matches);
-//   } catch (error) {
-//     // Kalau terjadi error,
-//     // kirim error tersebut ke middleware error handler Express.
-//     next(error);
-//   }
-// };
-
 // UPDATE MATCH / Update jadwal pertandingan
 const updateMatch = async (req, res) => {
   try {
@@ -218,47 +256,75 @@ const updateMatch = async (req, res) => {
     });
   }
 };
-//  DELETE MATCH / atau reset hasil pertandingan
+//  DELETE MATCH / reset atau hapus hasil pertandingan
 const deleteMatchResult = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const fixture = await Fixture.findByIdAndUpdate(
-      id,
-      {
-        home_score: null,
-        away_score: null,
-        goals: [],
-        status: "scheduled",
-      },
-      {
-        returnDocument: "after",
-        runValidators: true,
-      },
-    );
-
+    // 1. find a match / cari match terlebih dahulu
+    const fixture = await fixtureModel.findById(id);
     if (!fixture) {
       return res.status(404).json({
-        message: "Fixture tidak ditemukan",
+        message: "Match not found / Pertandingan tidak ditemukan",
       });
     }
+    // 2. delete all connected event goals / hapus semua gol event yang terhubung
+    await GoalEvent.deleteMany({ fixture: fixture._id });
 
-    // Hitung ulang standing karena hasil pertandingan sudah dihapus
-    await recalculateStandings(fixture.season);
+    // 3. delete match or fixture / hapus match atau fixture
+    await Fixture.findByIdAndDelete(id);
 
-    res.status(200).json({
-      message: "Hasil pertandingan berhasil direset",
-      data: fixture,
+    return res.status(200).json({
+      message: "Fixture atau Match dan seluruh GoalEvent telah dihapus",
     });
   } catch (error) {
-    console.error("Reset fixture result error:", error);
-
-    res.status(500).json({
-      message: "Gagal mereset hasil pertandingan",
+    return res.status(500).json({
+      message: "Gagal menghapus Match atau Fixture",
       error: error.message,
     });
   }
 };
+// const deleteMatchResult = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const fixture = await Fixture.findByIdAndUpdate(
+//       id,
+//       {
+//         home_score: null,
+//         away_score: null,
+//         goals: [],
+//         status: "scheduled",
+//       },
+//       {
+//         returnDocument: "after",
+//         runValidators: true,
+//       },
+//     );
+
+//     if (!fixture) {
+//       return res.status(404).json({
+//         message: "Fixture tidak ditemukan",
+//       });
+//     }
+
+//     // Hitung ulang standing karena hasil pertandingan sudah dihapus
+//     await recalculateStandings(fixture.season);
+
+//     res.status(200).json({
+//       message: "Hasil pertandingan berhasil direset",
+//       data: fixture,
+//     });
+//   } catch (error) {
+//     console.error("Reset fixture result error:", error);
+
+//     res.status(500).json({
+//       message: "Gagal mereset hasil pertandingan",
+//       error: error.message,
+//     });
+//   }
+// };
+
 // UPDATE SCORE / Update score pertandingan
 const updateScore = async (req, res) => {
   try {
@@ -271,6 +337,9 @@ const updateScore = async (req, res) => {
       away_score,
       goals = [],
     } = req.body;
+
+    console.log("goals: ", goals);
+    console.log("req body: ", req.body);
 
     // Validasi ID pertandingan
     if (!mongoose.isValidObjectId(id)) {
@@ -558,6 +627,7 @@ const recalculateStandings = async (season) => {
 };
 
 module.exports = {
+  createMatch,
   getMatches,
   getClubMatch,
   updateScore,

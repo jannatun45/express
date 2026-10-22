@@ -11,6 +11,7 @@ const fictureRoute = require("./app/routes/fixtureRoutes");
 const playerRoute = require("./app/routes/playerRoutes");
 const matchRoute = require("./app/routes/matchRouter");
 const goalEventRoute = require("./app/routes/goalEventRoutes");
+const statisticsRoute = require("./app/routes/statisticsRoute");
 
 // var indexRouter = require('./routes/index');
 // var usersRouter = require('./routes/users');
@@ -28,12 +29,15 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 // ROUTERS
 app.use("/api", clubRoute);
 app.use("/api", fictureRoute);
 app.use("/api", playerRoute);
 app.use("/api", matchRoute);
 app.use("/api", goalEventRoute);
+app.use("/api", statisticsRoute);
 
 // HOME
 app.use("/", function (req, res) {

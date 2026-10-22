@@ -426,4 +426,5 @@ module.exports = {
   getClubFixtures,
   getStandings,
   updateFixture,
+  // resetFixtureResult,
 };

@@ -1,47 +1,44 @@
-const Fixture = require("../models/fixtureModel");
+const GoalEvent = require("../models/goalEventModel");
 
-const getTopScorers = async (req, res) => {
+const getTopScorers = async (req, res, next) => {
   try {
     const { season } = req.query;
 
-    if (!season) {
-      return res.status(400).json({
-        message: "Season wajib diisi",
-      });
+    const matchStage = {};
+
+    // Filter berdasarkan musim jika parameter season dikirim
+    if (season) {
+      matchStage.season = season;
     }
 
-    const result = await Fixture.aggregate([
-      // Ambil pertandingan berdasarkan musim
+    const topScorers = await GoalEvent.aggregate([
+      // 1. Filter berdasarkan musim
       {
-        $match: {
-          season: season,
-          status: "finished",
-        },
+        $match: matchStage,
       },
 
-      // Pecah array goals menjadi satu dokumen per gol
-      {
-        $unwind: "$goals",
-      },
-
-      // Kelompokkan berdasarkan pencetak gol
+      // 2. Kelompokkan gol berdasarkan pemain
       {
         $group: {
-          _id: "$goals.scorer",
-          goals: {
-            $sum: 1,
-          },
+          _id: "$player",
+          totalGoals: { $sum: 1 },
         },
       },
 
-      // Gol terbanyak di atas
+      // 3. Urutkan dari jumlah gol terbanyak
       {
         $sort: {
-          goals: -1,
+          totalGoals: -1,
+          _id: 1,
         },
       },
 
-      // Ambil data pemain
+      // 4. Ambil maksimal 10 pemain
+      {
+        $limit: 10,
+      },
+
+      // 5. Ambil data pemain dan klub
       {
         $lookup: {
           from: "players",
@@ -50,13 +47,9 @@ const getTopScorers = async (req, res) => {
           as: "player",
         },
       },
-
-      // Ubah array player menjadi object
       {
         $unwind: "$player",
       },
-
-      // Ambil data klub
       {
         $lookup: {
           from: "clubs",
@@ -65,98 +58,77 @@ const getTopScorers = async (req, res) => {
           as: "club",
         },
       },
-
       {
-        $unwind: "$club",
+        $unwind: {
+          path: "$club",
+          preserveNullAndEmptyArrays: true,
+        },
       },
 
+      // 6. Tentukan data yang dikembalikan
       {
         $project: {
           _id: 0,
-
-          player: {
-            _id: "$player._id",
-            name_player: "$player.name_player",
-            photo: "$player.photo",
-            position: "$player.position",
-          },
-
-          club: {
-            _id: "$club._id",
-            name_club: "$club.name_club",
-            logo: "$club.logo",
-          },
-
-          goals: 1,
+          playerId: "$player._id",
+          playerName: "$player.name_player",
+          clubId: "$club._id",
+          clubName: "$club.name_club",
+          totalGoals: 1,
         },
       },
     ]);
 
-    return res.status(200).json({
-      season,
-      data: result,
+    res.status(200).json({
+      message: "Berhasil mengambil data top scorers",
+      data: topScorers,
     });
   } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Gagal mengambil Top Score",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
-const getTopAssists = async (req, res) => {
+const getTopAssists = async (req, res, next) => {
   try {
     const { season } = req.query;
+    console.log("season: ", season);
 
-    if (!season) {
-      return res.status(400).json({
-        message: "Season wajib diisi",
-      });
+    const matchStage = {
+      assist: { $exists: true, $ne: null },
+    };
+
+    // Filter berdasarkan musim jika parameter season dikirim
+    if (season) {
+      matchStage.season = season;
     }
 
-    const result = await Fixture.aggregate([
-      // Ambil pertandingan pada musim yang dipilih
+    const topAssists = await GoalEvent.aggregate([
+      // 1. Filter berdasarkan musim dan gol yang memiliki assist
       {
-        $match: {
-          season: season,
-          status: "finished",
-        },
+        $match: matchStage,
       },
 
-      // Pecah goals
-      {
-        $unwind: "$goals",
-      },
-
-      // Assist yang null tidak dihitung
-      {
-        $match: {
-          "goals.assist": {
-            $ne: null,
-          },
-        },
-      },
-
-      // Kelompokkan berdasarkan pemain assist
+      // 2. Kelompokkan berdasarkan pemain pemberi assist
       {
         $group: {
-          _id: "$goals.assist",
-          assists: {
-            $sum: 1,
-          },
+          _id: "$assist",
+          totalAssists: { $sum: 1 },
         },
       },
 
-      // Assist terbanyak di atas
+      // 3. Urutkan dari assist terbanyak
       {
         $sort: {
-          assists: -1,
+          totalAssists: -1,
+          _id: 1,
         },
       },
 
-      // Ambil data pemain
+      // 4. Ambil maksimal 10 pemain
+      {
+        $limit: 10,
+      },
+
+      // 5. Ambil data pemain
       {
         $lookup: {
           from: "players",
@@ -165,12 +137,11 @@ const getTopAssists = async (req, res) => {
           as: "player",
         },
       },
-
       {
         $unwind: "$player",
       },
 
-      // Ambil klub pemain
+      // 6. Ambil data klub pemain
       {
         $lookup: {
           from: "clubs",
@@ -179,51 +150,32 @@ const getTopAssists = async (req, res) => {
           as: "club",
         },
       },
-      // {
-      //   $lookup: {
-      //     from: "clubs",
-      //     localField: "player.club",
-      //     foreignField: "_id",
-      //     as: "club",
-      // },
-
       {
-        $unwind: "$club",
+        $unwind: {
+          path: "$club",
+          preserveNullAndEmptyArrays: true,
+        },
       },
 
+      // 7. Tentukan data yang dikembalikan
       {
         $project: {
           _id: 0,
-
-          player: {
-            _id: "$player._id",
-            name_player: "$player.name_player",
-            photo: "$player.photo",
-            position: "$player.position",
-          },
-
-          club: {
-            _id: "$club._id",
-            name_club: "$club.name_club",
-            logo: "$club.logo",
-          },
-
-          assists: 1,
+          playerId: "$player._id",
+          playerName: "$player.name_player",
+          clubId: "$club._id",
+          clubName: "$club.name_club",
+          totalAssists: 1,
         },
       },
     ]);
 
-    return res.status(200).json({
-      season,
-      data: result,
+    res.status(200).json({
+      message: "Berhasil mengambil data top assists",
+      data: topAssists,
     });
   } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Gagal mengambil Top Assist",
-      error: error.message,
-    });
+    next(error);
   }
 };
 
